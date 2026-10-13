@@ -33,6 +33,7 @@ async def generate(
     deployment_id: str | None = None,
     service: DeploymentService | None = None,
     media_resolver: MediaResolver | None = None,
+    timeout: float = 120.0,
 ) -> GenerationOutput | AsyncIterator[Response]:
     svc = service or get_service()
 
@@ -45,9 +46,13 @@ async def generate(
     headers = await svc.get_auth_headers(deployment)
 
     if gen_input.stream:
-        return _stream(deployment.url, headers, payload, adapter, media_resolver)
+        return _stream(
+            deployment.url, headers, payload, adapter, media_resolver, timeout=timeout
+        )
 
-    return await _collect(deployment.url, headers, payload, adapter, media_resolver)
+    return await _collect(
+        deployment.url, headers, payload, adapter, media_resolver, timeout=timeout
+    )
 
 
 async def _collect(
@@ -56,9 +61,12 @@ async def _collect(
     payload: dict[str, Any],
     adapter: Adapter,
     media_resolver: MediaResolver | None = None,
+    timeout: float = 120.0,
 ) -> GenerationOutput:
     result: GenerationOutput | None = None
-    async for item in _stream(url, headers, payload, adapter, media_resolver):
+    async for item in _stream(
+        url, headers, payload, adapter, media_resolver, timeout=timeout
+    ):
         if isinstance(item, GenerationOutput):
             result = item
     if result is None:
@@ -73,8 +81,9 @@ async def _stream(
     payload: dict[str, Any],
     adapter: Adapter,
     media_resolver: MediaResolver | None = None,
+    timeout: float = 120.0,
 ) -> AsyncIterator[Response]:
-    client = get_client()
+    client = get_client(timeout=timeout)
     async with client.stream("POST", url, headers=headers, json=payload) as response:
         if response.status_code != 200:
             body = await response.aread()

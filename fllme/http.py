@@ -5,10 +5,10 @@ import httpx
 _client: httpx.AsyncClient | None = None
 
 
-def get_client() -> httpx.AsyncClient:
+def get_client(timeout: float = 120.0) -> httpx.AsyncClient:
     global _client  # noqa: PLW0603
     if _client is None:
-        _client = httpx.AsyncClient(timeout=httpx.Timeout(120.0))
+        _client = httpx.AsyncClient(timeout=httpx.Timeout(timeout))
     return _client
 
 
