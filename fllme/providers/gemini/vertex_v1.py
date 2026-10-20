@@ -152,6 +152,7 @@ class GeminiVertexV1:
         grounding_meta: dict[str, Any] = {}
         model_name = ""
         has_tool_calls = False
+        search_queries: list[str] = []
 
         async for line in lines:
             if not line.startswith("data: "):
@@ -174,12 +175,9 @@ class GeminiVertexV1:
 
                 if gm := candidate.get("groundingMetadata"):
                     grounding_meta = gm
-                    for query in gm.get("webSearchQueries", []):
-                        accumulated.append(
-                            WebSearchQueryContent(
-                                query=query,
-                            )
-                        )
+                    for query in gm.get("webSearchQueries") or []:
+                        if query and query not in search_queries:
+                            search_queries.append(query)
 
                 for part in candidate.get("content", {}).get("parts", []):
                     if part.get("thought") and (text := part.get("text")):
@@ -222,6 +220,11 @@ class GeminiVertexV1:
 
         if has_tool_calls:
             finish_reason = FinishReason.TOOL_USE
+
+        accumulated.extend(
+            WebSearchQueryContent(query=query)
+            for query in search_queries
+        )
 
         message = Message(source=MessageSource.MODEL, contents=accumulated)
 
