@@ -222,8 +222,7 @@ class GeminiVertexV1:
             finish_reason = FinishReason.TOOL_USE
 
         accumulated.extend(
-            WebSearchQueryContent(query=query)
-            for query in search_queries
+            WebSearchQueryContent(query=query) for query in search_queries
         )
 
         message = Message(source=MessageSource.MODEL, contents=accumulated)
