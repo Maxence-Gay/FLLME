@@ -24,6 +24,7 @@ from fllme.models.message import (
     ThinkingContent,
     ToolCallContent,
     ToolResponseContent,
+    WebSearchQueryContent,
     UrlSource,
 )
 from fllme.models.output import (
@@ -571,6 +572,7 @@ class TestParseStream:
                         },
                         "finishReason": "STOP",
                         "groundingMetadata": {
+                            "webSearchQueries": ["What is the capital of France ?"],
                             "groundingChunks": [
                                 {
                                     "web": {
@@ -605,6 +607,17 @@ class TestParseStream:
             results.append(item)
 
         out: GenerationOutput = results[-1]
+        assert len(out.message.contents) > 0
+        assert any(
+            isinstance(content, WebSearchQueryContent)
+            for content in out.message.contents
+        )
+        web_search_content = next(
+            content
+            for content in out.message.contents
+            if isinstance(content, WebSearchQueryContent)
+        )
+        assert web_search_content.query == "What is the capital of France ?"
         assert len(out.citations) == 1
         citation = out.citations[0]
         assert citation.type == CitationType.SEARCH
