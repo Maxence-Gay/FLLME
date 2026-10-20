@@ -11,6 +11,7 @@ from .message import (
     ThinkingContent,
     ToolCallContent,
     ToolResponseContent,
+    WebSearchQueryContent,
     UrlSource,
 )
 from .input import (
@@ -99,5 +100,6 @@ __all__ = [
     "ToolsConfig",
     "UrlSource",
     "Usage",
+    "WebSearchQueryContent",
     "WebSearchTool",
 ]

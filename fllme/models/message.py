@@ -66,6 +66,11 @@ class ErrorContent(BaseModel):
     message: str
 
 
+class WebSearchQueryContent(BaseModel):
+    type: Literal["WebSearchQueryContent"] = "WebSearchQueryContent"
+    query: str
+
+
 Content = Annotated[
     Union[
         TextContent,
@@ -74,6 +79,7 @@ Content = Annotated[
         ToolResponseContent,
         ThinkingContent,
         ErrorContent,
+        WebSearchQueryContent,
     ],
     Field(discriminator="type"),
 ]
