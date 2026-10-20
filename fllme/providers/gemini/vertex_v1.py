@@ -24,6 +24,7 @@ from ...models.message import (
     ThinkingContent,
     ToolCallContent,
     ToolResponseContent,
+    WebSearchQueryContent,
     UrlSource,
 )
 from ...models.output import (
@@ -173,6 +174,12 @@ class GeminiVertexV1:
 
                 if gm := candidate.get("groundingMetadata"):
                     grounding_meta = gm
+                    for query in gm.get("webSearchQueries", []):
+                        accumulated.append(
+                            WebSearchQueryContent(
+                                query=query,
+                            )
+                        )
 
                 for part in candidate.get("content", {}).get("parts", []):
                     if part.get("thought") and (text := part.get("text")):
