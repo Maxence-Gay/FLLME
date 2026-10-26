@@ -8,6 +8,7 @@ import pytest
 from pydantic import BaseModel
 
 from fllme.models.input import (
+    BasicOutputType,
     GenerationInput,
     LLMConfig,
     ThinkingLevel,
@@ -448,7 +449,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         assert len(results) == 3
@@ -498,7 +501,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         assert isinstance(results[0], StreamDelta)
@@ -540,7 +545,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         assert len(results) == 1
@@ -580,7 +587,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         out: GenerationOutput = results[0]
@@ -632,7 +641,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         out: GenerationOutput = results[-1]
@@ -667,7 +678,7 @@ class TestParseStream:
             yield ""
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(lines()):
+        async for item in adapter.parse_stream(BasicOutputType.TEXT, lines()):
             results.append(item)
 
         assert isinstance(results[0], StreamDelta)
@@ -704,7 +715,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         out: GenerationOutput = results[0]
@@ -742,7 +755,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         out: GenerationOutput = results[0]

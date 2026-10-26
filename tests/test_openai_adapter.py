@@ -5,9 +5,11 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from fllme.errors import SerializationError
 from fllme.models.input import (
+    BasicOutputType,
     GenerationInput,
     LLMConfig,
     ThinkingLevel,
@@ -354,7 +356,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         assert len(results) == 3
@@ -411,7 +415,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         assert isinstance(results[0], StreamDelta)
@@ -482,7 +488,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         assert len(results) == 1
@@ -508,7 +516,7 @@ class TestParseStream:
             yield ""
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(lines()):
+        async for item in adapter.parse_stream(BasicOutputType.TEXT, lines()):
             results.append(item)
 
         assert isinstance(results[0], StreamDelta)
@@ -543,7 +551,9 @@ class TestParseStream:
         ]
 
         results: list[Any] = []
-        async for item in adapter.parse_stream(_lines_from(chunks)):
+        async for item in adapter.parse_stream(
+            BasicOutputType.TEXT, _lines_from(chunks)
+        ):
             results.append(item)
 
         out: GenerationOutput = results[-1]
@@ -551,6 +561,17 @@ class TestParseStream:
         assert out.usage.output_tokens == 10
         assert out.usage.cache is not None
         assert out.usage.cache.read_tokens == 50
+
+    @pytest.mark.asyncio
+    async def test_structured_output_not_implemented(self) -> None:
+        class Model(BaseModel):
+            name: str
+
+        adapter = OpenAIAzureV1()
+
+        with pytest.raises(NotImplementedError):
+            async for _ in adapter.parse_stream(Model, _lines_from([])):
+                pass
 
 
 class TestV2Serialize:
