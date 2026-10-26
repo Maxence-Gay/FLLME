@@ -322,7 +322,7 @@ def _build_generation_config(gen_input: GenerationInput) -> dict[str, Any]:
     output_type = gen_input.output_type
     if isinstance(output_type, type) and hasattr(output_type, "model_json_schema"):
         gen_config["responseMimeType"] = "application/json"
-        gen_config["responseSchema"] = output_type.model_json_schema()
+        gen_config["responseJsonSchema"] = output_type.model_json_schema()
     elif output_type == BasicOutputType.IMAGE:
         gen_config["responseModalities"] = ["IMAGE"]
     elif output_type == BasicOutputType.HYBRID:

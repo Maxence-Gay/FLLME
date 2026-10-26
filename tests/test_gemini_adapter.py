@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from fllme.models.input import (
     GenerationInput,
@@ -53,6 +54,16 @@ def _simple_input(text: str = "Hello") -> GenerationInput:
 async def _lines_from(chunks: list[dict[str, Any]]) -> AsyncIterator[str]:
     for chunk in chunks:
         yield f"data: {json.dumps(chunk)}"
+
+
+class _Address(BaseModel):
+    city: str
+    zip_code: str
+
+
+class _Contact(BaseModel):
+    name: str
+    address: _Address
 
 
 class TestSerialize:
@@ -114,6 +125,24 @@ class TestSerialize:
         adapter = GeminiVertexV1()
         payload = adapter.serialize(_simple_input())
         assert "thinkingConfig" not in payload.get("generationConfig", {})
+
+    def test_structured_output_uses_json_schema(self) -> None:
+        adapter = GeminiVertexV1()
+        inp = _simple_input()
+        inp = inp.model_copy(update={"output_type": _Contact})
+        payload = adapter.serialize(inp)
+        gc = payload["generationConfig"]
+        assert gc["responseMimeType"] == "application/json"
+        assert gc["responseJsonSchema"] == _Contact.model_json_schema()
+        assert "$defs" in gc["responseJsonSchema"]
+        assert "responseSchema" not in gc
+
+    def test_no_structured_output_by_default(self) -> None:
+        adapter = GeminiVertexV1()
+        payload = adapter.serialize(_simple_input())
+        gc = payload.get("generationConfig", {})
+        assert "responseJsonSchema" not in gc
+        assert "responseMimeType" not in gc
 
     def test_multi_turn(self) -> None:
         adapter = GeminiVertexV1()
