@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from fllme.errors import SerializationError
+from fllme.errors import SerializationError, StructuredOutputError
 from fllme.models.input import (
     BasicOutputType,
     GenerationInput,
@@ -50,6 +50,17 @@ def _simple_input(text: str = "Hello") -> GenerationInput:
             ),
         ],
     )
+
+
+class _Address(BaseModel):
+    city: str
+    zip_code: str | None = None
+
+
+class _Contact(BaseModel):
+    name: str
+    nickname: str | None = None
+    address: _Address
 
 
 async def _lines_from(chunks: list[dict[str, Any]]) -> AsyncIterator[str]:
@@ -316,6 +327,22 @@ class TestSerialize:
         assert payload["stream"] is True
         assert payload["stream_options"] == {"include_usage": True}
 
+    def test_structured_output_strict_schema(self) -> None:
+        adapter = OpenAIAzureV1()
+        inp = _simple_input()
+        inp = inp.model_copy(update={"output_type": _Contact})
+        payload = adapter.serialize(inp)
+        fmt = payload["response_format"]
+        assert fmt["type"] == "json_schema"
+        assert fmt["json_schema"]["strict"] is True
+        assert fmt["json_schema"]["name"] == "_Contact"
+        schema = fmt["json_schema"]["schema"]
+        assert schema["additionalProperties"] is False
+        assert set(schema["required"]) == {"name", "nickname", "address"}
+        addr = schema["$defs"]["_Address"]
+        assert addr["additionalProperties"] is False
+        assert set(addr["required"]) == {"city", "zip_code"}
+
 
 class TestParseStream:
     @pytest.mark.asyncio
@@ -563,14 +590,60 @@ class TestParseStream:
         assert out.usage.cache.read_tokens == 50
 
     @pytest.mark.asyncio
-    async def test_structured_output_not_implemented(self) -> None:
-        class Model(BaseModel):
-            name: str
-
+    async def test_structured_output_parsed(self) -> None:
         adapter = OpenAIAzureV1()
+        chunks: list[dict[str, Any]] = [
+            {
+                "id": "chatcmpl-struct",
+                "model": "gpt-5.5",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": '{"name": "Ana", "nickname": null, '},
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-struct",
+                "model": "gpt-5.5",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
+                            "content": '"address": {"city": "Paris", "zip_code": null}}'
+                        },
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
+        ]
 
-        with pytest.raises(NotImplementedError):
-            async for _ in adapter.parse_stream(Model, _lines_from([])):
+        results: list[Any] = []
+        async for item in adapter.parse_stream(_Contact, _lines_from(chunks)):
+            results.append(item)
+
+        out: GenerationOutput = results[-1]
+        assert out.parsed == _Contact(name="Ana", address=_Address(city="Paris"))
+
+    @pytest.mark.asyncio
+    async def test_structured_output_truncated_raises(self) -> None:
+        adapter = OpenAIAzureV1()
+        chunks: list[dict[str, Any]] = [
+            {
+                "id": "chatcmpl-trunc",
+                "model": "gpt-5.5",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": '{"name": "An'},
+                        "finish_reason": "length",
+                    }
+                ],
+            },
+        ]
+
+        with pytest.raises(StructuredOutputError):
+            async for _ in adapter.parse_stream(_Contact, _lines_from(chunks)):
                 pass
 
 
